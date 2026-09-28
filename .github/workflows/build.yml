@@ -1,0 +1,56 @@
+name: Build watch face
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Zeus CLI
+        run: npm install -g @zeppos/zeus-cli
+
+      - name: Build
+        run: zeus build
+
+      - name: Extract the Bip 6 package
+        run: |
+          set -euo pipefail
+          ls -la dist
+          ZAB="$(ls dist/*.zab | head -n1)"
+          mkdir -p out unpacked
+          cp "$ZAB" out/orange-time.zab
+          unzip -o "$ZAB" -d unpacked
+          find unpacked -type f -exec ls -la {} \;
+          ZPK="$(find unpacked -name '*.zpk' | head -n1)"
+          test -n "$ZPK"
+          cp "$ZPK" out/orange-time.zpk
+          unzip -l out/orange-time.zpk
+          unzip -p out/orange-time.zpk device.zip > device.zip
+          unzip -l device.zip
+          unzip -p device.zip app.json; echo
+
+      - name: Publish to the build branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd out
+          echo "zpkd1://raw.githubusercontent.com/${GITHUB_REPOSITORY}/build/orange-time.zpk" > install-link.txt
+          git init -q -b build
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Build from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" build
