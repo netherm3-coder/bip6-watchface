@@ -17,20 +17,22 @@ from fontTools.varLib import instancer
 from PIL import Image, ImageDraw, ImageFont
 
 # ------------------------------------------------------------------ налаштування
-COLOR = (255, 140, 0)          # помаранчевий #FF8C00
+TIME_COLOR = (255, 140, 0)     # час: помаранчевий #FF8C00
+TEXT_COLOR = (255, 255, 255)   # дата й день тижня: білі
 SCREEN_W, SCREEN_H, RADIUS = 390, 450, 86
 
 TIME_AXES = {"wght": 500, "wdth": 55, "opsz": 144, "GRAD": 0, "slnt": 0}   # середня товщина, звужені цифри
 TIME_SIZE = 236                 # px кегля -> висота цифр ~172 px
+TIME_Y = 62                     # верхній край цифр часу
 DATE_AXES = {"wght": 600, "wdth": 100, "opsz": 36, "GRAD": 0, "slnt": 0}
-DATE_SIZE = 58                  # px кегля -> висота літер ~43 px
+DATE_SIZE = 44                  # px кегля -> висота літер ~33 px
 TRACKING = 2                    # міжлітерний інтервал для дати і дня тижня
 DIGIT_PAD = 3                   # поля з боків кожної цифри часу
 COLON_PAD = 5                   # поля з боків двокрапки
 DATE_DIGIT_PAD = 2              # поля з боків цифр дати
-GAP_TIME_DATE = 30              # відступ від часу до дати
-GAP_DATE_WEEK = 16              # відступ від дати до дня тижня
-GAP_DAY_MONTH = 18              # проміжок між числом і місяцем
+BOTTOM_MARGIN = 62              # від низу екрана до нижнього краю дня тижня
+GAP_DATE_WEEK = 14              # відступ від дати до дня тижня
+GAP_DAY_MONTH = 14              # проміжок між числом і місяцем
 
 MONTHS = ["СІЧ", "ЛЮТ", "БЕР", "КВІ", "ТРА", "ЧЕР", "ЛИП", "СЕР", "ВЕР", "ЖОВ", "ЛИС", "ГРУ"]
 WEEKDAYS = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]  # у Zepp OS тиждень починається з понеділка
@@ -75,14 +77,14 @@ def ink_box(font, text, tracking=0):
     return x0 - 800, y0 - 600, x1 - 800, y1 - 600
 
 
-def text_image(font, text, canvas_w, top, bottom, align, tracking=0):
+def text_image(font, text, canvas_w, top, bottom, align, tracking=0, color=TIME_COLOR):
     """PNG із прозорим фоном; усі картинки набору мають спільний вертикальний діапазон [top, bottom]."""
     box = ink_box(font, text, tracking)
     ink_w = box[2] - box[0]
     x = {"left": 0, "center": (canvas_w - ink_w) / 2, "right": canvas_w - ink_w}[align]
     mask = Image.new("L", (canvas_w, bottom - top), 0)
     draw_tracked(ImageDraw.Draw(mask), round(x - box[0]), -top, text, font, tracking)
-    img = Image.new("RGBA", mask.size, COLOR + (0,))
+    img = Image.new("RGBA", mask.size, color + (0,))
     img.putalpha(mask)
     return img
 
@@ -102,7 +104,7 @@ def colon_image(font, height):
     mask = Image.new("L", (w, height), 0)
     y = (height - (box[3] - box[1])) / 2 - box[1]
     ImageDraw.Draw(mask).text((COLON_PAD - box[0], round(y)), ":", font=font, fill=255, anchor="ls")
-    img = Image.new("RGBA", mask.size, COLOR + (0,))
+    img = Image.new("RGBA", mask.size, TIME_COLOR + (0,))
     img.putalpha(mask)
     return img
 
@@ -123,24 +125,23 @@ def main():
     d_digit_w = max(ink_box(date_font, str(i))[2] - ink_box(date_font, str(i))[0] for i in range(10)) + 2 * DATE_DIGIT_PAD
     month_w = max(ink_box(date_font, m, TRACKING)[2] - ink_box(date_font, m, TRACKING)[0] for m in MONTHS)
     week_w = max(ink_box(date_font, w, TRACKING)[2] - ink_box(date_font, w, TRACKING)[0] for w in WEEKDAYS)
-    date_digits = [text_image(date_font, str(i), d_digit_w, d_top, d_bottom, "center") for i in range(10)]
-    months = [text_image(date_font, m, month_w, d_top, d_bottom, "left", TRACKING) for m in MONTHS]
-    weeks = [text_image(date_font, w, week_w, d_top, d_bottom, "center", TRACKING) for w in WEEKDAYS]
+    date_digits = [text_image(date_font, str(i), d_digit_w, d_top, d_bottom, "center", color=TEXT_COLOR) for i in range(10)]
+    months = [text_image(date_font, m, month_w, d_top, d_bottom, "left", TRACKING, TEXT_COLOR) for m in MONTHS]
+    weeks = [text_image(date_font, w, week_w, d_top, d_bottom, "center", TRACKING, TEXT_COLOR) for w in WEEKDAYS]
     date_h = d_bottom - d_top
 
-    # ---- координати (дизайн 390 px = екран Bip 6)
+    # ---- координати (дизайн 390 px = екран Bip 6): час зверху, дата й день тижня притиснуті донизу
     time_w = 4 * digit_w + colon_w
     avg_month = sum(ink_box(date_font, m, TRACKING)[2] - ink_box(date_font, m, TRACKING)[0] for m in MONTHS) / 12
     date_group_w = 2 * d_digit_w + GAP_DAY_MONTH + avg_month
-    block_h = time_h + GAP_TIME_DATE + date_h + GAP_DATE_WEEK + date_h
-    y0 = round((SCREEN_H - block_h) / 2)
+    week_y = SCREEN_H - BOTTOM_MARGIN - date_h
     L = {
-        "TIME_Y": y0,
+        "TIME_Y": TIME_Y,
         "HOUR_X": round((SCREEN_W - time_w) / 2),
-        "DATE_Y": y0 + time_h + GAP_TIME_DATE,
+        "DATE_Y": week_y - GAP_DATE_WEEK - date_h,
         "DAY_X": round((SCREEN_W - date_group_w) / 2),
         "WEEK_X": round((SCREEN_W - week_w) / 2),
-        "WEEK_Y": y0 + time_h + GAP_TIME_DATE + date_h + GAP_DATE_WEEK,
+        "WEEK_Y": week_y,
     }
     L["COLON_X"] = L["HOUR_X"] + 2 * digit_w
     L["MINUTE_X"] = L["COLON_X"] + colon_w

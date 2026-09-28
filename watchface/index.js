@@ -13,16 +13,16 @@ import { Time } from '@zos/sensor'
 // Координати генерує tools/gen_assets.py — не правте вручну.
 // <layout>
 const COLON_X = 178
-const DATE_DIGIT_W = 34
-const DATE_Y = 267
-const DAY_X = 100
+const DATE_DIGIT_W = 27
+const DATE_Y = 296
+const DAY_X = 121
 const DIGIT_W = 80
 const HOUR_X = 18
 const MINUTE_X = 212
-const MONTH_X = 186
-const TIME_Y = 65
-const WEEK_X = 156
-const WEEK_Y = 334
+const MONTH_X = 189
+const TIME_Y = 62
+const WEEK_X = 166
+const WEEK_Y = 349
 // </layout>
 
 const range = (n, from = 0) => Array.from({ length: n }, (_, i) => i + from)
