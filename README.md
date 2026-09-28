@@ -12,7 +12,7 @@
 
    <img src="docs/install-qr.png" width="220" alt="QR для встановлення">
 
-   Посилання в QR-коді: `zpkd1://raw.githubusercontent.com/netherm3-coder/bip6-watchface/build/orange-time.zpk`
+   Посилання в QR-коді: `watchface://raw.githubusercontent.com/netherm3-coder/bip6-watchface/build/orange-time.zpk` (схема `watchface://` — для циферблатів; `zpkd1://` Zepp приймає лише для міні-застосунків)
 4. На годиннику відкрий Налаштування → Дисплей → Завжди увімкнений екран і вибери стиль, що бере вигляд із циферблата.
 
 ## Як це збирається

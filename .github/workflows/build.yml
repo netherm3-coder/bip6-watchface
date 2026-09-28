@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           cd out
-          echo "zpkd1://raw.githubusercontent.com/${GITHUB_REPOSITORY}/build/orange-time.zpk" > install-link.txt
+          echo "watchface://raw.githubusercontent.com/${GITHUB_REPOSITORY}/build/orange-time.zpk" > install-link.txt
           git init -q -b build
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
