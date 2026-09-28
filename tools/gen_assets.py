@@ -24,15 +24,18 @@ SCREEN_W, SCREEN_H, RADIUS = 390, 450, 86
 TIME_AXES = {"wght": 500, "wdth": 55, "opsz": 144, "GRAD": 0, "slnt": 0}   # середня товщина, звужені цифри
 TIME_SIZE = 236                 # px кегля -> висота цифр ~172 px
 TIME_Y = 62                     # верхній край цифр часу
-DATE_AXES = {"wght": 600, "wdth": 100, "opsz": 36, "GRAD": 0, "slnt": 0}
-DATE_SIZE = 44                  # px кегля -> висота літер ~33 px
-TRACKING = 2                    # міжлітерний інтервал для дати і дня тижня
+DATE_AXES = {"wght": 800, "wdth": 100, "opsz": 36, "GRAD": 0, "slnt": 0}   # «28 ВЕР»: жирний
+DATE_SIZE = 36                  # px кегля -> висота літер ~26 px
+DATE_TRACKING = 1
+WEEK_AXES = {"wght": 700, "wdth": 100, "opsz": 36, "GRAD": 0, "slnt": 0}   # «ПН»: трохи менший, розріджений
+WEEK_SIZE = 31                  # px кегля -> висота літер ~22 px
+WEEK_TRACKING = 4
 DIGIT_PAD = 3                   # поля з боків кожної цифри часу
 COLON_PAD = 5                   # поля з боків двокрапки
-DATE_DIGIT_PAD = 2              # поля з боків цифр дати
-BOTTOM_MARGIN = 62              # від низу екрана до нижнього краю дня тижня
-GAP_DATE_WEEK = 14              # відступ від дати до дня тижня
-GAP_DAY_MONTH = 14              # проміжок між числом і місяцем
+DATE_DIGIT_PAD = 1              # поля з боків цифр дати
+BOTTOM_MARGIN = 50              # від низу екрана до нижнього краю дня тижня
+GAP_DATE_WEEK = 10              # відступ від дати до дня тижня
+GAP_DAY_MONTH = 10              # проміжок між числом і місяцем
 
 MONTHS = ["СІЧ", "ЛЮТ", "БЕР", "КВІ", "ТРА", "ЧЕР", "ЛИП", "СЕР", "ВЕР", "ЖОВ", "ЛИС", "ГРУ"]
 WEEKDAYS = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]  # у Zepp OS тиждень починається з понеділка
@@ -113,28 +116,33 @@ def colon_image(font, height):
 def main():
     time_font = static_font(TIME_AXES, TIME_SIZE)
     date_font = static_font(DATE_AXES, DATE_SIZE)
+    week_font = static_font(WEEK_AXES, WEEK_SIZE)
 
     digits, digit_w, time_h = glyph_set(time_font, [str(i) for i in range(10)], "center", DIGIT_PAD)
     colon = colon_image(time_font, time_h)
     colon_w = colon.width
 
-    # дата і день тижня мають спільну висоту рядка, щоб усе стояло на одній базовій лінії
-    date_texts = [str(i) for i in range(10)] + MONTHS + WEEKDAYS
-    boxes = [ink_box(date_font, t, TRACKING) for t in date_texts]
+    # число й місяць мають спільну висоту рядка, щоб стояти на одній базовій лінії
+    date_texts = [str(i) for i in range(10)] + MONTHS
+    boxes = [ink_box(date_font, t, DATE_TRACKING) for t in date_texts]
     d_top, d_bottom = min(b[1] for b in boxes), max(b[3] for b in boxes)
     d_digit_w = max(ink_box(date_font, str(i))[2] - ink_box(date_font, str(i))[0] for i in range(10)) + 2 * DATE_DIGIT_PAD
-    month_w = max(ink_box(date_font, m, TRACKING)[2] - ink_box(date_font, m, TRACKING)[0] for m in MONTHS)
-    week_w = max(ink_box(date_font, w, TRACKING)[2] - ink_box(date_font, w, TRACKING)[0] for w in WEEKDAYS)
+    month_w = max(ink_box(date_font, m, DATE_TRACKING)[2] - ink_box(date_font, m, DATE_TRACKING)[0] for m in MONTHS)
     date_digits = [text_image(date_font, str(i), d_digit_w, d_top, d_bottom, "center", color=TEXT_COLOR) for i in range(10)]
-    months = [text_image(date_font, m, month_w, d_top, d_bottom, "left", TRACKING, TEXT_COLOR) for m in MONTHS]
-    weeks = [text_image(date_font, w, week_w, d_top, d_bottom, "center", TRACKING, TEXT_COLOR) for w in WEEKDAYS]
+    months = [text_image(date_font, m, month_w, d_top, d_bottom, "left", DATE_TRACKING, TEXT_COLOR) for m in MONTHS]
     date_h = d_bottom - d_top
+
+    w_boxes = [ink_box(week_font, w, WEEK_TRACKING) for w in WEEKDAYS]
+    w_top, w_bottom = min(b[1] for b in w_boxes), max(b[3] for b in w_boxes)
+    week_w = max(b[2] - b[0] for b in w_boxes)
+    weeks = [text_image(week_font, w, week_w, w_top, w_bottom, "center", WEEK_TRACKING, TEXT_COLOR) for w in WEEKDAYS]
+    week_h = w_bottom - w_top
 
     # ---- координати (дизайн 390 px = екран Bip 6): час зверху, дата й день тижня притиснуті донизу
     time_w = 4 * digit_w + colon_w
-    avg_month = sum(ink_box(date_font, m, TRACKING)[2] - ink_box(date_font, m, TRACKING)[0] for m in MONTHS) / 12
+    avg_month = sum(ink_box(date_font, m, DATE_TRACKING)[2] - ink_box(date_font, m, DATE_TRACKING)[0] for m in MONTHS) / 12
     date_group_w = 2 * d_digit_w + GAP_DAY_MONTH + avg_month
-    week_y = SCREEN_H - BOTTOM_MARGIN - date_h
+    week_y = SCREEN_H - BOTTOM_MARGIN - week_h
     L = {
         "TIME_Y": TIME_Y,
         "HOUR_X": round((SCREEN_W - time_w) / 2),
